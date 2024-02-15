@@ -1,41 +1,68 @@
 ---
-import Layout from '../../layouts/Layout.astro';
+import Layout from "../../layouts/Layout.astro";
 ---
+
 <Layout title="The first experiment">
     <main>
         <h1>Experiment 1</h1>
-        <p>This is the first experiment I undertook to start learning to work with Tone.js, with assistance from TonalJs as well.</p>
-        <p>It is a simple, random two-part melody with ostinato bass accopaniment. It picks a random musical root note, then randomly plays notes from the minor scale of that root using the first voice.  Randomization is used to insert rests on the first voice. The first voice is also filtered (which is modulated by an LFO, whose rate is modulated by another LFO) and run through a dotted-quarter delay. The bass voice is played with a second synth, with some logic to start the sequence on the root, then play the root after every 16 notes played.  Some reverb is also added to the mix.  </p>
+        <p>
+            This is the first experiment I undertook to start learning to work
+            with Tone.js, with assistance from TonalJs as well.
+        </p>
+        <p>
+            It is a simple, random two-part melody with ostinato bass
+            accopaniment. It picks a random musical root note, then randomly
+            plays notes from the minor scale of that root using the first voice.
+            Randomization is used to insert rests on the first voice. The first
+            voice is also filtered (which is modulated by an LFO, whose rate is
+            modulated by another LFO) and run through a dotted-quarter delay.
+            The bass voice is played with a second synth, with some logic to
+            start the sequence on the root, then play the root after every 16
+            notes played. Some reverb is also added to the mix.
+        </p>
 
         <p></p>
 
-        <p id="key-text">Click the button to start a two-part generative piece of music.</p>
-        <button class="btn btn-primary" onclick="toggleSound()">Audio On</button>
-
+        <p id="key-text">
+            Click the button to start a two-part generative piece of music.
+        </p>
+        <button class="btn btn-primary" onclick="toggleSound()">Audio On</button
+        >
     </main>
-
 </Layout>
 
-
 <script type="module">
-    import * as Tone from 'https://cdn.skypack.dev/tone';
-    import { Scale } from 'https://cdn.skypack.dev/@tonaljs/tonal';
-  
+    import * as Tone from "https://cdn.skypack.dev/tone";
+    import { Scale } from "https://cdn.skypack.dev/@tonaljs/tonal";
+
     // Set up our pitches for the random melodies.  We pick a tonic at random, then use the minor scale of that tonic.
-    const tonics = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // All possible tonics
-    const randomTonic = tonics[Math.floor(Math.random() * tonics.length)]; // Select a random tonic
-    const scale = Scale.get(`${randomTonic} minor`).notes; // Get the notes in the minor scale of the random tonic
-    let key = scale[0];
-    // Set up our loop intervals for the random melodies
-    let loopIntervals = ['2n', '1n', '4n'];
+    const tonics = [
+        "C",
+        "C#",
+        "D",
+        "D#",
+        "E",
+        "F",
+        "F#",
+        "G",
+        "G#",
+        "A",
+        "A#",
+        "B",
+    ]; // All possible tonics
+
     // Init variables for our bassline to restate the tonic.
     let noteCount = 0;
     let resetAfter = 16; // Reset to the
 
     // Set up our audio devices
-    const reverb = new Tone.Reverb({ decay: 5, preDelay: .2, wet: .6}).toDestination(); 
-    const filter = new Tone.Filter(100, 'lowpass');
-    const delay = new Tone.FeedbackDelay('4n.', 0.65).toDestination();
+    const reverb = new Tone.Reverb({
+        decay: 5,
+        preDelay: 0.2,
+        wet: 0.6,
+    }).toDestination();
+    const filter = new Tone.Filter(100, "lowpass");
+    const delay = new Tone.FeedbackDelay("4n.", 0.65).toDestination();
 
     // Synth config and creation
     const synth1 = new Tone.Synth();
@@ -45,72 +72,85 @@ import Layout from '../../layouts/Layout.astro';
 
     // Synth 1 is our main melodic synth.
     synth1.set({
-      oscillator: {
-        type: 'fmsine', 
-      },
-      envelope: {
-        attack: 0.05,
-        decay: 0.4,
-        sustain: 0.3,
-        release: 0.4
-      },
-      volume: -12,
+        oscillator: {
+            type: "fmsine",
+        },
+        envelope: {
+            attack: 0.05,
+            decay: 0.4,
+            sustain: 0.3,
+            release: 0.4,
+        },
+        volume: -12,
     });
 
     // The filter LFO.
     const filterLFO = new Tone.LFO({
-      type: 'sine',
-      frequency: 1,
-      min: 50,
-      max: 2000
+        type: "sine",
+        frequency: 1,
+        min: 50,
+        max: 2000,
     }).start();
     filterLFO.connect(filter.frequency);
 
     // An LFO to modulate the rate of the filter LFO.
     const rateLFO = new Tone.LFO({
-      type: 'sine',
-      frequency: 0.35,
-      min: 0.1,
-      max: 3
+        type: "sine",
+        frequency: 0.35,
+        min: 0.1,
+        max: 3,
     }).start();
     rateLFO.connect(filterLFO.frequency);
 
     // Our signal chain
-    synth1.chain(filter,delay);
+    synth1.chain(filter, delay);
     synth2.connect(reverb);
     delay.connect(reverb);
 
     // The main toggleSound function and play loop.
     window.toggleSound = () => {
-      if (!isPlaying) {
-        loop1 = new Tone.Loop(time => {
-            if (Math.random() < 0.82) {
-                const note = scale[Math.floor(Math.random() * scale.length)] + '4'; // Select a random note and append '4' to set the octave
-                synth1.triggerAttackRelease(note, '2n', time);
-            }
-        }, loopIntervals[Math.floor(Math.random() * loopIntervals.length)]).start(0);
-  
-        loop2 = new Tone.Loop(time => {
-          let bassNote;
-          if (noteCount % resetAfter === 0 ) {
-            bassNote = randomTonic + '2';
-            noteCount = 0; // Reset the note count
-          } else {
-            bassNote = scale[Math.floor(Math.random() * scale.length)] + '2'; // Select a random note and append '2' to set the octave
-          }
-          synth2.triggerAttackRelease(bassNote, '1n', time);
-          noteCount++;
-        }, '1m').start(0);
-  
-        Tone.start();
-        Tone.Transport.start();
-        document.getElementById('key-text').textContent = `This is a 2-part generative piece in the key of ${key} minor. Click the button to generate another piece of music.`
-        isPlaying = true;
-      } else {
-        loop1.stop(0);
-        loop2.stop(0);
-        Tone.Transport.stop();
-        isPlaying = false;
-      }
-    }
-  </script>
+        if (!isPlaying) {
+            const randomTonic =
+                tonics[Math.floor(Math.random() * tonics.length)]; // Select a random tonic
+            const scale = Scale.get(`${randomTonic} minor`).notes; // Get the notes in the minor scale of the random tonic
+            let key = scale[0];
+            // Set up our loop intervals for the random melodies
+            let loopIntervals = ["2n", "1n", "4n"];
+            loop1 = new Tone.Loop(
+                (time) => {
+                    if (Math.random() < 0.82) {
+                        const note =
+                            scale[Math.floor(Math.random() * scale.length)] +
+                            "4"; // Select a random note and append '4' to set the octave
+                        synth1.triggerAttackRelease(note, "2n", time);
+                    }
+                },
+                loopIntervals[Math.floor(Math.random() * loopIntervals.length)],
+            ).start(0);
+
+            loop2 = new Tone.Loop((time) => {
+                let bassNote;
+                if (noteCount % resetAfter === 0) {
+                    bassNote = randomTonic + "2";
+                    noteCount = 0; // Reset the note count
+                } else {
+                    bassNote =
+                        scale[Math.floor(Math.random() * scale.length)] + "2"; // Select a random note and append '2' to set the octave
+                }
+                synth2.triggerAttackRelease(bassNote, "1n", time);
+                noteCount++;
+            }, "1m").start(0);
+
+            Tone.start();
+            Tone.Transport.start();
+            document.getElementById("key-text").textContent =
+                `This is a 2-part generative piece in the key of ${key} minor. Click the button to generate another piece of music.`;
+            isPlaying = true;
+        } else {
+            loop1.stop(0);
+            loop2.stop(0);
+            Tone.Transport.stop();
+            isPlaying = false;
+        }
+    };
+</script>
