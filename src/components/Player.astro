@@ -11,20 +11,57 @@
     const tonics = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // All possible tonics
     const randomTonic = tonics[Math.floor(Math.random() * tonics.length)]; // Select a random tonic
     const scale = Scale.get(`${randomTonic} minor`).notes; // Get the notes in the minor scale of the random tonic
-  
-    const synth1 = new Tone.Synth().toDestination();
-    const synth2 = new Tone.Synth().toDestination();
+    let loopIntervals = ['2n', '1n', '4n', '8n'];
+
+    const reverb = new Tone.Reverb(5).toDestination(); 
+    const filter = new Tone.Filter(100, 'lowpass');
+    const synth1 = new Tone.Synth();
+    const synth2 = new Tone.Synth();
     let isPlaying = false;
     let loop1, loop2;
-  
+
+    const delay = new Tone.FeedbackDelay('4n.', 0.65).toDestination();
+    synth1.set({
+      oscillator: {
+        type: 'fmsine', 
+      },
+      envelope: {
+        attack: 0.05,
+        decay: 0.4,
+        sustain: 0.3,
+        release: 0.4
+      },
+      volume: -10,
+    });
+
+    const filterLFO = new Tone.LFO({
+      type: 'sine',
+      frequency: 1,
+      min: 50,
+      max: 2000
+    }).start();
+    filterLFO.connect(filter.frequency);
+
+    const rateLFO = new Tone.LFO({
+      type: 'sine',
+      frequency: 0.5,
+      min: 0.1,
+      max: 3
+    }).start();
+    rateLFO.connect(filterLFO.frequency);
+
+    synth1.chain(filter,delay);
+    synth2.connect(reverb);
+    delay.connect(reverb);
+
     window.toggleSound = () => {
       if (!isPlaying) {
         loop1 = new Tone.Loop(time => {
             if (Math.random() < 0.82) {
                 const note = scale[Math.floor(Math.random() * scale.length)] + '4'; // Select a random note and append '4' to set the octave
-                synth1.triggerAttackRelease(note, '4n', time);
+                synth1.triggerAttackRelease(note, '2n', time);
             }
-        }, '2n').start(0);
+        }, loopIntervals[Math.floor(Math.random() * loopIntervals.length)]).start(0);
   
         loop2 = new Tone.Loop(time => {
           const note = scale[Math.floor(Math.random() * scale.length)] + '2'; // Select a random note and append '2' to set the octave
