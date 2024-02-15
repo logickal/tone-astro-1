@@ -1,26 +1,36 @@
 ---
 
 ---
-
+<p id="key-text">Click the button to start a two-part generative piece of music.</p>
 <button class="btn btn-primary" onclick="toggleSound()">Audio On</button>
 
 <script type="module">
     import * as Tone from 'https://cdn.skypack.dev/tone';
     import { Scale } from 'https://cdn.skypack.dev/@tonaljs/tonal';
   
+    // Set up our pitches for the random melodies.  We pick a tonic at random, then use the minor scale of that tonic.
     const tonics = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // All possible tonics
     const randomTonic = tonics[Math.floor(Math.random() * tonics.length)]; // Select a random tonic
     const scale = Scale.get(`${randomTonic} minor`).notes; // Get the notes in the minor scale of the random tonic
-    let loopIntervals = ['2n', '1n', '4n', '8n'];
+    let key = scale[0];
+    // Set up our loop intervals for the random melodies
+    let loopIntervals = ['2n', '1n', '4n'];
+    // Init variables for our bassline to restate the tonic.
+    let noteCount = 0;
+    let resetAfter = 16; // Reset to the
 
+    // Set up our audio devices
     const reverb = new Tone.Reverb({ decay: 5, preDelay: .2, wet: .6}).toDestination(); 
     const filter = new Tone.Filter(100, 'lowpass');
+    const delay = new Tone.FeedbackDelay('4n.', 0.65).toDestination();
+
+    // Synth config and creation
     const synth1 = new Tone.Synth();
     const synth2 = new Tone.Synth();
     let isPlaying = false;
     let loop1, loop2;
 
-    const delay = new Tone.FeedbackDelay('4n.', 0.65).toDestination();
+    // Synth 1 is our main melodic synth.
     synth1.set({
       oscillator: {
         type: 'fmsine', 
@@ -31,9 +41,10 @@
         sustain: 0.3,
         release: 0.4
       },
-      volume: -10,
+      volume: -12,
     });
 
+    // The filter LFO.
     const filterLFO = new Tone.LFO({
       type: 'sine',
       frequency: 1,
@@ -42,6 +53,7 @@
     }).start();
     filterLFO.connect(filter.frequency);
 
+    // An LFO to modulate the rate of the filter LFO.
     const rateLFO = new Tone.LFO({
       type: 'sine',
       frequency: 0.35,
@@ -50,10 +62,12 @@
     }).start();
     rateLFO.connect(filterLFO.frequency);
 
+    // Our signal chain
     synth1.chain(filter,delay);
     synth2.connect(reverb);
     delay.connect(reverb);
 
+    // The main toggleSound function and play loop.
     window.toggleSound = () => {
       if (!isPlaying) {
         loop1 = new Tone.Loop(time => {
@@ -64,12 +78,20 @@
         }, loopIntervals[Math.floor(Math.random() * loopIntervals.length)]).start(0);
   
         loop2 = new Tone.Loop(time => {
-          const note = scale[Math.floor(Math.random() * scale.length)] + '2'; // Select a random note and append '2' to set the octave
-          synth2.triggerAttackRelease(note, '1n', time);
+          let bassNote;
+          if (noteCount % resetAfter === 0 ) {
+            bassNote = randomTonic + '2';
+            noteCount = 0; // Reset the note count
+          } else {
+            bassNote = scale[Math.floor(Math.random() * scale.length)] + '2'; // Select a random note and append '2' to set the octave
+          }
+          synth2.triggerAttackRelease(bassNote, '1n', time);
+          noteCount++;
         }, '1m').start(0);
   
         Tone.start();
         Tone.Transport.start();
+        document.getElementById('key-text').textContent = `This is a 2-part generative piece in the key of ${key} minor. Click the button to generate another piece of music.`
         isPlaying = true;
       } else {
         loop1.stop(0);
