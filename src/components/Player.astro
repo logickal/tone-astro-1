@@ -1,0 +1,44 @@
+---
+
+---
+
+<button class="btn btn-primary" onclick="toggleSound()">Audio On</button>
+
+<script type="module">
+    import * as Tone from 'https://cdn.skypack.dev/tone';
+    import { Scale } from 'https://cdn.skypack.dev/@tonaljs/tonal';
+  
+    const tonics = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']; // All possible tonics
+    const randomTonic = tonics[Math.floor(Math.random() * tonics.length)]; // Select a random tonic
+    const scale = Scale.get(`${randomTonic} minor`).notes; // Get the notes in the minor scale of the random tonic
+  
+    const synth1 = new Tone.Synth().toDestination();
+    const synth2 = new Tone.Synth().toDestination();
+    let isPlaying = false;
+    let loop1, loop2;
+  
+    window.toggleSound = () => {
+      if (!isPlaying) {
+        loop1 = new Tone.Loop(time => {
+            if (Math.random() < 0.82) {
+                const note = scale[Math.floor(Math.random() * scale.length)] + '4'; // Select a random note and append '4' to set the octave
+                synth1.triggerAttackRelease(note, '4n', time);
+            }
+        }, '2n').start(0);
+  
+        loop2 = new Tone.Loop(time => {
+          const note = scale[Math.floor(Math.random() * scale.length)] + '2'; // Select a random note and append '2' to set the octave
+          synth2.triggerAttackRelease(note, '1n', time);
+        }, '1m').start(0);
+  
+        Tone.start();
+        Tone.Transport.start();
+        isPlaying = true;
+      } else {
+        loop1.stop(0);
+        loop2.stop(0);
+        Tone.Transport.stop();
+        isPlaying = false;
+      }
+    }
+  </script>
