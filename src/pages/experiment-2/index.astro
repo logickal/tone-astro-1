@@ -10,10 +10,22 @@ import Layout from "../../layouts/Layout.astro";
             with Tone.js, with assistance from TonalJs as well.
         </p>
         <p>
-            We will ultimately descripbe it here.
+            In this experiment, I wanted to start attempting to make give the
+            music some melodic sense and consistency. Once the key is decided,
+            we set a randomly-generated melodic length then generate a fixed set
+            of notes based on that melody. Then, we generate a set of variations
+            (the number of which is also random) on that melody, be be played
+            back in a loop. The ostinato bassline is a simple statement of the
+            melody, while the top voice plays the notes of the variations, with
+            a random rhythm.
         </p>
 
-        <p></p>
+        <p>
+            From a sound-generation standpoint, I wanted to start experimenting
+            with the FM synthesis capabilities of Tone.js, and to start using
+            the fmsine and some of the LFOs and other modulators to start
+            creating some more interesting sounds.  We also randomly route the melody to one of two different delay lines.
+        </p>
 
         <p id="key-text">
             Click the button to start a two-part generative piece of music.
@@ -26,11 +38,9 @@ import Layout from "../../layouts/Layout.astro";
 <script type="module">
     import * as Tone from "https://cdn.skypack.dev/tone";
     import { Scale } from "https://cdn.skypack.dev/@tonaljs/tonal";
-    import { MusicVAE } from 'https://cdn.skypack.dev/@magenta/music@^1.0.0';
-    
 
     // Set up our pitches for the random melodies.  We pick a tonic at random, then use the minor scale of that tonic.
-    const tonicsOld = [
+    const tonics = [
         "C",
         "C#",
         "D",
@@ -45,13 +55,38 @@ import Layout from "../../layouts/Layout.astro";
         "B",
     ]; // All possible tonics
 
-    const keyMapping = { 'C': 0, 'C#': 1, 'D': 2, 'D#': 3, 'E': 4, 'F': 5, 'F#': 6, 'G': 7, 'G#': 8, 'A': 9, 'A#': 10, 'B': 11 }; // Mapping from musical keys to integers
+    const randomTonic = (tonics) =>
+        tonics[Math.floor(Math.random() * tonics.length)]; // Select a random tonic
+    const setScale = (tonic) => Scale.get(`${tonic} minor`).notes; // Get the notes in the minor scale of the random tonic
 
+    const generateMelody = (scale, length) => {
+        let melody = [];
 
-    // The MusicVAE model
-    const model = new MusicVAE('https://storage.googleapis.com/magentadata/js/checkpoints/music_vae/mel_2bar_small');
-    await model.initialize();
+        // The first note should be the tonic
+        melody.push(scale[0]);
+        for (let i = 0; i < length; i++) {
+            melody.push(scale[Math.floor(Math.random() * scale.length)]);
+        }
+        return melody;
+    };
 
+    const createVariations = (melody, numVariations, scale) => {
+        console.log(melody, numVariations, scale);
+        let variations = [];
+        for (let i = 0; i < numVariations; i++) {
+            let variation = [...melody];
+            let indexToChange =
+                Math.floor(Math.random() * (melody.length - 1)) + 1;
+            let newNote = scale[Math.floor(Math.random() * scale.length)];
+            variation[indexToChange] = newNote;
+            variations.push(variation);
+        }
+        return variations;
+    };
+
+    // Init variables for our bassline to restate the tonic.
+    let noteCount = 0;
+    let resetAfter = 16; // Reset to the
 
     // Set up our audio devices
     const reverb = new Tone.Reverb({
@@ -60,18 +95,29 @@ import Layout from "../../layouts/Layout.astro";
         wet: 0.6,
     }).toDestination();
     const filter = new Tone.Filter(100, "lowpass");
-    const delay = new Tone.FeedbackDelay("4n.", 0.65).toDestination();
+    const delay4 = new Tone.FeedbackDelay("4n.", 0.65).toDestination();
+    const delay8 = new Tone.FeedbackDelay("8n.", 0.45).toDestination();
 
     // Synth config and creation
     const synth1 = new Tone.Synth();
     const synth2 = new Tone.Synth();
     let isPlaying = false;
-    let loop1, loop2;
 
     // Synth 1 is our main melodic synth.
     synth1.set({
         oscillator: {
             type: "fmsine",
+            modulationEnvelope: {
+                attack: 0.1,
+                decay: 0.2,
+                sustain: 0.3,
+                release: 0.5,
+            },
+            modulationIndex: 10,
+            modulation: {
+                type: "sine",
+                detune: 10,
+            },
         },
         envelope: {
             attack: 0.05,
@@ -100,42 +146,93 @@ import Layout from "../../layouts/Layout.astro";
     }).start();
     rateLFO.connect(filterLFO.frequency);
 
+    const modLFO = new Tone.LFO({
+        type: "sine",
+        frequency: 0.75,
+        min: 0.1,
+        max: 5,
+    }).start();
+    modLFO.connect(synth1.oscillator.modulationIndex);
+
+    const fmLFO = new Tone.LFO({
+        type: "sine",
+        frequency: 0.255,
+        min: 0.1,
+        max: 5,
+    }).start();
+    fmLFO.connect(synth1.oscillator.harmonicity);
+    filterLFO.connect(fmLFO.frequency);
+
     // Our signal chain
-    synth1.chain(filter, delay);
+    synth1.chain(filter, delay4);
     synth2.connect(reverb);
-    delay.connect(reverb);
+    delay4.connect(reverb);
 
     // The main toggleSound function and play loop.
-    window.toggleSound = async () => {
+    window.toggleSound = () => {
         if (!isPlaying) {
-            const tonics = Object.keys(keyMapping);
-            const randomTonic =
-                tonics[Math.floor(Math.random() * tonics.length)]; // Select a random tonic
-            const scale = Scale.get(`${randomTonic} minor`).notes; // Get the notes in the minor scale of the random tonic
-            let key = tonics[randomTonic];
-
-            const sample = await model.sample(1, { temperature: 0.5, key: randomTonic });
-            const notes1 = sample[0].notes.filter(note => note.pitch >=  60 && note.pitch <= 72);
-            const notes2 = sample[0].notes.filter(note => note.pitch >= 48 && note.pitch <= 60);
+            // Set the BPM to a random value between 40 and 110
+            Tone.Transport.bpm.value =
+                Math.floor(Math.random() * (110 - 40 + 1)) + 40;
+            const tonic = randomTonic(tonics); // Select a random tonic
+            const scale = setScale(tonic);
+            // Get the notes in the minor scale of the random tonic
+            let key = scale[0];
+            // Set the melody length to a random value between 5 and 12
+            let melodyLength = Math.floor(Math.random() * (12 - 5 + 1)) + 5;
+            let melody = generateMelody(scale, melodyLength);
+            // Set the number of variations between 1 and 5
+            let numVariations = Math.floor(Math.random() * (5 - 1 + 1)) + 1;
+            console.log(melodyLength, numVariations);
+            let variations = createVariations(melody, 3, scale);
             // Set up our loop intervals for the random melodies
             let loopIntervals = ["2n", "1n", "4n"];
+            let loops = variations.map((variation, index) => {
+                let noteIndex = 0;
+                return new Tone.Loop(
+                    (time) => {
+                        let note =
+                            variation[noteIndex] +
+                            (index % 2 === 0 ? "4" : "2");
+                        let synth = index % 2 === 0 ? synth1 : synth2;
 
-            loop1 = new Tone.Sequence((time, note) => {
-                synth1.triggerAttackRelease(Tone.Frequency(note.pitch, 'midi'), '8n', time);
-            }, notes1, loopIntervals[Math.floor(Math.random() * loopIntervals.length)]).start(0);
+                        if (synth === synth2) {
+                            note = variation[noteIndex] + "2"; // Always play the main melody in the lower octave on synth2
+                        }
 
-            loop2 = new Tone.Sequence((time, note) => {
-                synth2.triggerAttackRelease(Tone.Frequency(note.pitch, 'midi'), '2n', time);
-            }, notes2, "1m").start(0);
+                        // Only play the note on synth1 approximately 80% of the time
+                        if (synth !== synth1 || Math.random() > 0.6) {
+                            synth.triggerAttackRelease(note, "2n", time);
+                        }
 
+                        // Randomly route notes from synth1 to either delay4 or delay8
+                        if (synth === synth1) {
+                            if (Math.random() < 0.35) {
+                                synth.chain(filter, delay8);
+                                console.log('Output via delay8');
+                            } else {
+                                synth.chain(filter, delay4);
+                                console.log('Output via delay4');
+                            }
+                        }
+
+                        noteIndex++;
+
+                        if (noteIndex >= variation.length) {
+                            noteIndex = 0; // Reset noteIndex to 0 when the end of the variation is reached
+                        }
+                    },
+                    loopIntervals[
+                        Math.floor(Math.random() * loopIntervals.length)
+                    ],
+                ).start(index * Tone.Time("8n").toSeconds());
+            });
             Tone.start();
             Tone.Transport.start();
             document.getElementById("key-text").textContent =
-                `This is a 2-part generative piece in the key of ${key} minor. Click the button to generate another piece of music.`;
+                `This is a 2-part generative piece in the key of ${key} minor. The generated melody is ${melodyLength} notes in length, and ${numVariations} variations were generated. Click the button to generate another piece of music.`;
             isPlaying = true;
         } else {
-            loop1.stop(0);
-            loop2.stop(0);
             Tone.Transport.stop();
             isPlaying = false;
         }
