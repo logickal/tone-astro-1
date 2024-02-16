@@ -183,7 +183,6 @@ import Layout from "../../layouts/Layout.astro";
             let melody = generateMelody(scale, melodyLength);
             // Set the number of variations between 1 and 5
             let numVariations = Math.floor(Math.random() * (5 - 1 + 1)) + 1;
-            console.log(melodyLength, numVariations);
             let variations = createVariations(melody, 3, scale);
             // Set up our loop intervals for the random melodies
             let loopIntervals = ["2n", "1n", "4n"];
@@ -209,10 +208,8 @@ import Layout from "../../layouts/Layout.astro";
                         if (synth === synth1) {
                             if (Math.random() < 0.35) {
                                 synth.chain(filter, delay8);
-                                console.log('Output via delay8');
                             } else {
                                 synth.chain(filter, delay4);
-                                console.log('Output via delay4');
                             }
                         }
 
