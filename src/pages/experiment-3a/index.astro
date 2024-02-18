@@ -111,9 +111,10 @@ import Layout from "../../layouts/Layout.astro";
 
                     // Schedule the start of the fade out
                     console.log("Fadeout scheudling for " + fadeOutTime);
+                    actualFade = fadeOutTime / 3;
                     Tone.Transport.schedule(() => {
                         console.log(player.name + " scheduled fading out for " + fadeOutTime);
-                        player.volume.rampTo(-Infinity, (fadeOutTime / 3));
+                        player.volume.rampTo(-Infinity, actualFade);
                     }, ("+" + fadeOutTime));
 
                     // Schedule the player to stop after the fade out
@@ -125,7 +126,7 @@ import Layout from "../../layouts/Layout.astro";
                             console.log("Player disposed");
                             player.dispose();
                         }, "+1");
-                    }, (("+" + fadeOutTime) + 10));
+                    }, (("+" + fadeOutTime + actualFade)));
 
                 });
                 let delayChance = Math.random();
