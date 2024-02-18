@@ -1,0 +1,138 @@
+---
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="The third experiment - Variation">
+    <main class="prose mx-auto py-15">
+        <h1>Experiment 3A</h1>
+        <p>
+            Identical to the previous experiment, but with the additiona of more randomization in regards to:
+            <ul>
+                <li>Loop Length (between 2.5 and 10 seconds)</li>
+                <li>Loop Duration (Between 2 and 5 minutes)</li>
+
+            </ul>
+            Plus, slower fade in and fade out times and longer loop execution (1.5 minutes instead of 45 seconds).
+        </p>
+        <p>
+            In preparation for this experiemnt, I have added two audio files to
+            the project that I will use to play with the tone.js sampler. These files are two long ambient demos called "4pos" and "Bathing Hands". The experiment will follow this basic order of operations:
+            <ol>
+                <li>Randomly select one of the two files</li>
+                <li>Find a random 5-second fragment of the file and assign it to a new Tone.Player</li>
+                <li>Start the player with a fadein</li>
+                <li>After 2 minutes, fade the player to infinity and stop the player</li>
+            </ol>
+            This will be repeated every 90 seconds.
+        </p>
+        <p>
+            This does produce some very nice ambient results.  There is some trickiness I do not yet understand with the Player.fadeIn and .fadeOut options and how those interact with playback. There is no cross-fade looping available with these players, so there are going to be noticible clicks when the players loop unless we get lucky with the start point.
+        </p>
+
+        <p>For some additional continuity, I pipe the players through a Reverb. </p>
+        <p>Note that it can take a few moments for audio to begin as the audio file is loaded by the player.  You can watch the activity of the players loading in the console.</p>
+
+        <p id="key-text">
+            Click the button to start a sample-based piece of music.
+        </p>
+        <button class="btn btn-primary" onclick="toggleSound()">Audio On</button
+        >
+    </main>
+</Layout>
+
+<script type="module">
+    import * as Tone from "https://cdn.skypack.dev/tone";
+    import { Scale } from "https://cdn.skypack.dev/@tonaljs/tonal";
+
+    let audioFiles = {
+        "audio/4pos.mp3": "A",
+        "audio/bathing-hands.mp3": "C",
+    };
+
+    let isPlaying = false;
+    let loop;
+
+    const reverb = new Tone.Reverb({
+        decay: 5,
+        preDelay: 0.2,
+        wet: 0.75,
+    }).toDestination();
+
+    window.toggleSound = () => {
+        if (!isPlaying) {
+            // Set the tempo
+            Tone.Transport.bpm.value = 60;
+
+            // Create our loop
+            loop = new Tone.Loop((time) => {
+                // Load the paths
+                const paths = Object.keys(audioFiles);
+                // Select a random path
+                const randomPath =
+                    paths[Math.floor(Math.random() * paths.length)];
+                // Create a new player using the randomly chosen file
+                console.log("Creating a new player from " + randomPath);
+                const player = new Tone.Player(randomPath, () => {
+                    player.autostart = false;
+                    if (player.loaded) {
+                        console.log("Player loaded with " + randomPath);
+                    }
+                    const duration = player.buffer.duration;
+                    console.log(duration);
+                    // Choose a start point
+                    // Randomly choose a loop length
+                    const loopLength = Math.random() * 7.5 + 2.5;
+                    const start = Math.random() * (duration - loopLength);
+                    player.setLoopPoints(start, (start + loopLength));
+                    console.log("loop set to " + loopLength);
+                    player.loop = true;
+                    player.fadeIn = "4m";
+                    player.fadeOut = "2m";
+                    player.name =
+                        randomPath +
+                        ":from" +
+                        start +
+                        "to" +
+                        (loopLength) +
+                        "for2m";
+                    console.log("Playing " + player.name);
+
+                    // Start the player
+                    player.start();
+
+                    // Fade in
+                    player.volume.rampTo(-12, 45);
+
+                    fadeOutTime = Math.random() * 60 + 120;
+
+                    // Schedule the start of the fade out
+                    Tone.Transport.schedule(() => {
+                        console.log(player.name + " scheduled fading out for " + fadeOutTime);
+                        player.volume.rampTo(-Infinity, 45);
+                    }, fadeOutTime);
+
+                    // Schedule the player to stop after the fade out
+                    Tone.Transport.schedule(() => {
+                        player.stop();
+                        console.log(player.name + " stopped");
+                        // Schedule the player to be disposed after it stops.
+                        Tone.Transport.schedule(() => {
+                            console.log("Player disposed");
+                            player.dispose();
+                        }, "+1");
+                    }, fadeOutTime + 10);
+
+                }).connect(reverb);
+            }, "90").start(0);
+
+            Tone.start();
+            Tone.Transport.start();
+
+            isPlaying = true;
+        } else {
+            loop.stop(0);
+            Tone.Transport.stop();
+            isPlaying = false;
+        }
+    };
+</script>
