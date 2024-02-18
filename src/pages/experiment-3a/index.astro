@@ -65,6 +65,7 @@ import Layout from "../../layouts/Layout.astro";
         if (!isPlaying) {
             // Set the tempo
             Tone.Transport.bpm.value = 60;
+            Tone.Transport.debug = true;
 
             // Create our loop
             loop = new Tone.Loop((time) => {
@@ -90,7 +91,6 @@ import Layout from "../../layouts/Layout.astro";
                     console.log("loop set to " + loopLength);
                     player.loop = true;
                     const fadeOutTime = Math.random() * 60 + 120;
-                    console.log("fadeout set to " + fadeOutTime);
                     console.log("Fading out at " + fadeOutTime);
                     player.name =
                         randomPath +
@@ -104,21 +104,21 @@ import Layout from "../../layouts/Layout.astro";
                     // Start the player
                     player.volume.value = -Infinity;
                     player.start();
-
                     // Fade in
                     player.volume.rampTo(-12, 15);
 
-
                     // Schedule the start of the fade out
+                    let actualFade = fadeOutTime / 3;
+                    let fadeOutStart = Tone.Transport.now() + fadeOutTime;
+                    let stopTime = fadeOutStart + actualFade;
                     console.log("Fadeout scheudling for " + fadeOutTime);
-                    actualFade = fadeOutTime / 3;
-                    Tone.Transport.schedule(() => {
-                        console.log(player.name + " scheduled fading out for " + fadeOutTime);
+                    Tone.Transport.schedule((time) => {
+                        console.log(player.name + " beginning fadeout at  " + fadeOutStart);
                         player.volume.rampTo(-Infinity, actualFade);
-                    }, ("+" + fadeOutTime));
+                    }, fadeOutStart);
 
                     // Schedule the player to stop after the fade out
-                    Tone.Transport.schedule(() => {
+                    Tone.Transport.schedule((time) => {
                         player.stop();
                         console.log(player.name + " stopped");
                         // Schedule the player to be disposed after it stops.
@@ -126,7 +126,7 @@ import Layout from "../../layouts/Layout.astro";
                             console.log("Player disposed");
                             player.dispose();
                         }, "+1");
-                    }, (("+" + fadeOutTime + actualFade)));
+                    }, stopTime);
 
                 });
                 let delayChance = Math.random();
