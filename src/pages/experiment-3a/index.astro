@@ -57,8 +57,11 @@ import Layout from "../../layouts/Layout.astro";
         preDelay: 0.2,
         wet: 0.75,
     }).toDestination();
+    const delay4 = new Tone.FeedbackDelay("4n.", 0.65).set({wet: .5}).toDestination();
+
 
     window.toggleSound = () => {
+        let previousFadeOutTime = 0;
         if (!isPlaying) {
             // Set the tempo
             Tone.Transport.bpm.value = 60;
@@ -86,30 +89,32 @@ import Layout from "../../layouts/Layout.astro";
                     player.setLoopPoints(start, (start + loopLength));
                     console.log("loop set to " + loopLength);
                     player.loop = true;
-                    player.fadeIn = "4m";
-                    player.fadeOut = "2m";
+                    const fadeOutTime = Math.random() * 60 + 120;
+                    console.log("fadeout set to " + fadeOutTime);
+                    console.log("Fading out at " + fadeOutTime);
                     player.name =
                         randomPath +
                         ":from" +
                         start +
-                        "to" +
-                        (loopLength) +
-                        "for2m";
+                        "loop:" +
+                        loopLength +
+                        ":for" + fadeOutTime;
                     console.log("Playing " + player.name);
 
                     // Start the player
+                    player.volume.value = -Infinity;
                     player.start();
 
                     // Fade in
-                    player.volume.rampTo(-12, 45);
+                    player.volume.rampTo(-12, 15);
 
-                    fadeOutTime = Math.random() * 60 + 120;
 
                     // Schedule the start of the fade out
+                    console.log("Fadeout scheudling for " + fadeOutTime);
                     Tone.Transport.schedule(() => {
                         console.log(player.name + " scheduled fading out for " + fadeOutTime);
-                        player.volume.rampTo(-Infinity, 45);
-                    }, fadeOutTime);
+                        player.volume.rampTo(-Infinity, (fadeOutTime / 3));
+                    }, ("+" + fadeOutTime));
 
                     // Schedule the player to stop after the fade out
                     Tone.Transport.schedule(() => {
@@ -120,14 +125,22 @@ import Layout from "../../layouts/Layout.astro";
                             console.log("Player disposed");
                             player.dispose();
                         }, "+1");
-                    }, fadeOutTime + 10);
+                    }, (("+" + fadeOutTime) + 10));
 
-                }).connect(reverb);
+                });
+                let delayChance = Math.random();
+                if (delayChance > 0.5) {
+                    console.log(player.name + "connected to delay and reverb.");
+                    player.chain(delay4, reverb);
+                } else {
+                    player.connect(reverb);
+                    console.log(player.name + "connected to reverb.");
+                }
+
             }, "90").start(0);
 
             Tone.start();
             Tone.Transport.start();
-
             isPlaying = true;
         } else {
             loop.stop(0);
