@@ -23,10 +23,137 @@ import Player from '../../components/Player.astro';
 
 <script>
     import { isPlaying } from "../../store";
-
+    import * as Tone from "https://cdn.skypack.dev/tone";
+    import { Scale } from "https://cdn.skypack.dev/@tonaljs/tonal";
     //subscribe to isPlaying store for play button.
 
     isPlaying.subscribe(playing => {
-        console.log('isPlaying', playing);
+        if (playing) {
+            mainLoop();
+        } else {
+            Tone.Transport.stop();
+        }
     });
+
+
+    let getRandom = (min, max) => {
+        return Math.random() * (max - min) + min;
+    }
+
+    // Initialize our effects.
+    
+    // Reverb
+    // Delay4
+    // Delay2
+    const reverb = new Tone.Reverb({
+        decay: 8,
+        preDelay: 0.1,
+        wet: 0.75,
+    }).toDestination();
+    const delay4 = new Tone.FeedbackDelay("4n.", 0.65).set({wet: .5});
+    const delay2 = new Tone.FeedbackDelay("2n.", 0.65).set({wet: .5});
+
+    const filter4 = new Tone.Filter(1000, "lowpass");
+    const filter2 = new Tone.Filter(900, "lowpass");
+
+    delay4.connect(filter4);
+    delay2.connect(filter2);
+    filter2.connect(reverb);
+    filter4.connect(reverb);
+
+    let randomEffect = () => {
+        let effects = [reverb, delay4, delay2];
+        return effects[Math.floor(Math.random() * effects.length)];
+    };
+
+    // Our Audiofile Choices
+    let audioFiles = {
+        "audio/4pos.mp3": "A",
+        "audio/bathing-hands.mp3": "C",
+        "audio/carter.wav": "C",
+        "audio/cmin.wav": "C"
+    };
+
+    // Select a random audio file from the list with random audiofile.
+    let paths = Object.keys(audioFiles);
+    let randomAudioFile = () => {
+        return paths[Math.floor(Math.random() * paths.length)];
+    };
+
+    // Initialize our mixer?.
+
+    // Initialize our audio players.
+    // Create an array with 4 random selections from our audio files - it is intentional that we may want the same file selected multiple times.
+    let randomFiles = Array.from({length: 4}, () => randomAudioFile());
+    // Create an array with 4 tone players from our selected files.
+    let players = [];
+    // Configure the players with random configurations.
+
+    randomFiles.forEach(file => {
+        let player = new Tone.Player(file);
+        player.loop = true;
+        player.autostart = false;
+        // Randomly selected start and end points
+
+        // random but constrained fade in and fade out
+        player.fadeIn = getRandom(5, 20);
+        player.fadeOut = getRandom(5, 20);
+        // Connected to a random effect from the chains - reverb, delay4, delay2.
+        player.connect(randomEffect());
+        player.name = file;
+        players.push(player);
+    });
+
+    // Select a player to start from any player that isn't playing.
+    let selectPlayer = (players) => {
+        let player = players[Math.floor(Math.random() * players.length)];
+        if (player.state === "stopped") {
+            return players.indexOf(player);
+        } else {
+            selectPlayer(players);
+        }
+    };
+
+    let playSchedule = (player, time, duration) => {
+        console.log(player);
+        console.log('Scheduling player for ' + player.name + ' at ' + time + ' for ' + duration);
+        Tone.Transport.scheduleOnce(() => {        
+            const duration = player.buffer.duration;
+            console.log('Duration ' + duration);
+            const loopLength = getRandom(1,5);
+            console.log('Loop Length ' + loopLength);
+            const start = Math.random() * (duration - loopLength);
+            console.log('Start ' + start);
+            player.startPoint = start;
+            player.setLoopPoints(start, (start + loopLength));
+            player.start(0, player.startPoint);
+            Tone.Transport.scheduleOnce(() => {
+                console.log("stopping" + player.name)
+                player.stop();
+            }, `+${duration}`);
+        }, `+${time}`);
+    };
+
+
+    let mainLoop = () =>  {
+        console.log('Waiting for Tone....');
+        Tone.loaded().then(() => {
+            console.log('Tone is Loaded)');
+            Tone.Transport.bpm.value = 55;
+
+                Tone.start();
+                Tone.Transport.start();
+                // play the first player for between 100-120 seconds.
+                let firstDuration = getRandom(100, 120);
+                // The first player should start immediately
+                console.log('Playing first player for ' + firstDuration + ' seconds.');
+                playSchedule(players[selectPlayer(players)], 0, firstDuration);
+                // Select a player to start, then play for a random duration.
+                let loop = new Tone.Loop((time) => {
+                    let duration = getRandom(90, 120);
+                    playSchedule(players[selectPlayer(players)], getRandom(1, 30), duration);
+                }, "45").start("+45");
+        })
+    }; 
+
 </script>
