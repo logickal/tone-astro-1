@@ -1,0 +1,32 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Player from '../../components/Player.astro';
+---
+
+<Layout title="The fourth experiment">
+    <main class="prose mx-auto py-15">
+        <h1>Experiment 4</h1>
+        
+        <p>First, we start by moving our player toggle into a component and implementing a nanostore to hold that state.</p>
+
+        <p>
+
+        </p>
+
+        <Player />
+
+    </main>
+</Layout>
+
+
+
+
+<script>
+    import { isPlaying } from "../../store";
+
+    //subscribe to isPlaying store for play button.
+
+    isPlaying.subscribe(playing => {
+        console.log('isPlaying', playing);
+    });
+</script>
