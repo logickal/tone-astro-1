@@ -8,7 +8,10 @@ import Player from "../../components/Player.astro";
         <h1>Experiment 4</h1>
 
         <p>
-            Tried to implement a play button in a component but sharing state wasn't working.  Rather, it was working, but if I made the page script a module it broke the state sharing.  I'm sure there's another way to do it, but I don't want to spend more time on it.
+            Tried to implement a play button in a component but sharing state
+            wasn't working. Rather, it was working, but if I made the page
+            script a module it broke the state sharing. I'm sure there's another
+            way to do it, but I don't want to spend more time on it.
         </p>
 
         <p></p>
@@ -95,7 +98,7 @@ import Player from "../../components/Player.astro";
     // Select a player to start from any player that isn't playing.
     let selectPlayer = (players) => {
         let player = players[Math.floor(Math.random() * players.length)];
-        console.log("player state: " + player.state)
+        console.log("player state: " + player.state);
         if (player.state == "playing") {
             selectPlayer(players);
         } else {
@@ -108,7 +111,7 @@ import Player from "../../components/Player.astro";
         Tone.Transport.scheduleOnce(() => {
             const duration = player.buffer.duration;
             console.log("Duration " + duration);
-            const loopLength = getRandom(1, 5);
+            const loopLength = Math.min(getRandom(1, 5), duration);
             console.log("Loop Length " + loopLength);
             const start = Math.random() * (duration - loopLength);
             console.log("Start " + start);
@@ -159,10 +162,39 @@ import Player from "../../components/Player.astro";
             isPlaying = true;
             console.log("Toggling Sound");
             Tone.start();
-
             console.log("Waiting for Tone....");
 
-            mainLoop();
+            Tone.loaded().then(() => {
+                console.log("Tone is Loaded)");
+                Tone.Transport.bpm.value = 55;
+                delay2.set({
+                    delayTime: "2m",
+                });
+                delay4.set({
+                    delayTime: "4m",
+                });
+
+                console.log("Starting Tone and transport");
+                Tone.Transport.start();
+                console.log("These are the players");
+                console.log(players);
+                // play the first player for between 100-120 seconds.
+                let firstDuration = getRandom(100, 120);
+                // The first player should start immediately
+
+                playSchedule(players[selectPlayer(players)], 0, firstDuration);
+                // Select a player to start, then play for a random duration.
+                let loop = new Tone.Loop((time) => {
+                    let duration = getRandom(90, 120);
+                    playSchedule(
+                        players[selectPlayer(players)],
+                        getRandom(1, 10),
+                        duration,
+                    );
+                }, "45").start("+45");
+            });
+
+            //  mainLoop();
         } else {
             Tone.Transport.stop();
             isPlaying = false;
