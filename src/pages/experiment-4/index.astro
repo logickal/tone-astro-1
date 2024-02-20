@@ -1,47 +1,34 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import Player from '../../components/Player.astro';
+import Layout from "../../layouts/Layout.astro";
+import Player from "../../components/Player.astro";
 ---
 
 <Layout title="The fourth experiment">
     <main class="prose mx-auto py-15">
         <h1>Experiment 4</h1>
-        
-        <p>First, we start by moving our player toggle into a component and implementing a nanostore to hold that state.</p>
 
         <p>
-
+            Tried to implement a play button in a component but sharing state wasn't working.  Rather, it was working, but if I made the page script a module it broke the state sharing.  I'm sure there's another way to do it, but I don't want to spend more time on it.
         </p>
 
-        <Player />
+        <p></p>
 
+        <button class="btn btn-primary" onclick="toggleSound()">Audio On</button
+        >
     </main>
 </Layout>
 
-
-
-
-<script>
-    import { isPlaying } from "../../store";
+<script type="module">
     import * as Tone from "https://cdn.skypack.dev/tone";
-    import { Scale } from "https://cdn.skypack.dev/@tonaljs/tonal";
     //subscribe to isPlaying store for play button.
 
-    isPlaying.subscribe(playing => {
-        if (playing) {
-            mainLoop();
-        } else {
-            Tone.Transport.stop();
-        }
-    });
-
-
+    let isPlaying = false;
     let getRandom = (min, max) => {
         return Math.random() * (max - min) + min;
-    }
+    };
 
     // Initialize our effects.
-    
+
     // Reverb
     // Delay4
     // Delay2
@@ -50,8 +37,8 @@ import Player from '../../components/Player.astro';
         preDelay: 0.1,
         wet: 0.75,
     }).toDestination();
-    const delay4 = new Tone.FeedbackDelay("4n.", 0.65).set({wet: .5});
-    const delay2 = new Tone.FeedbackDelay("2n.", 0.65).set({wet: .5});
+    const delay4 = new Tone.FeedbackDelay(800, 0.65).set({ wet: 0.5 });
+    const delay2 = new Tone.FeedbackDelay(1600, 0.65).set({ wet: 0.5 });
 
     const filter4 = new Tone.Filter(1000, "lowpass");
     const filter2 = new Tone.Filter(900, "lowpass");
@@ -70,8 +57,8 @@ import Player from '../../components/Player.astro';
     let audioFiles = {
         "audio/4pos.mp3": "A",
         "audio/bathing-hands.mp3": "C",
-        "audio/carter.wav": "C",
-        "audio/cmin.wav": "C"
+        "audio/carter.mp3": "C",
+        "audio/cmin.mp3": "C",
     };
 
     // Select a random audio file from the list with random audiofile.
@@ -84,12 +71,12 @@ import Player from '../../components/Player.astro';
 
     // Initialize our audio players.
     // Create an array with 4 random selections from our audio files - it is intentional that we may want the same file selected multiple times.
-    let randomFiles = Array.from({length: 4}, () => randomAudioFile());
+    let randomFiles = Array.from({ length: 4 }, () => randomAudioFile());
     // Create an array with 4 tone players from our selected files.
     let players = [];
     // Configure the players with random configurations.
 
-    randomFiles.forEach(file => {
+    randomFiles.forEach((file) => {
         let player = new Tone.Player(file);
         player.loop = true;
         player.autostart = false;
@@ -102,58 +89,83 @@ import Player from '../../components/Player.astro';
         player.connect(randomEffect());
         player.name = file;
         players.push(player);
+        console.log(player);
     });
 
     // Select a player to start from any player that isn't playing.
     let selectPlayer = (players) => {
         let player = players[Math.floor(Math.random() * players.length)];
-        if (player.state === "stopped") {
-            return players.indexOf(player);
-        } else {
+        console.log("player state: " + player.state)
+        if (player.state == "playing") {
             selectPlayer(players);
+        } else {
+            return players.indexOf(player);
         }
     };
 
     let playSchedule = (player, time, duration) => {
-        console.log(player);
-        console.log('Scheduling player for ' + player.name + ' at ' + time + ' for ' + duration);
-        Tone.Transport.scheduleOnce(() => {        
+        console.log("Buffer Loaded");
+        Tone.Transport.scheduleOnce(() => {
             const duration = player.buffer.duration;
-            console.log('Duration ' + duration);
-            const loopLength = getRandom(1,5);
-            console.log('Loop Length ' + loopLength);
+            console.log("Duration " + duration);
+            const loopLength = getRandom(1, 5);
+            console.log("Loop Length " + loopLength);
             const start = Math.random() * (duration - loopLength);
-            console.log('Start ' + start);
+            console.log("Start " + start);
             player.startPoint = start;
-            player.setLoopPoints(start, (start + loopLength));
+            player.setLoopPoints(start, start + loopLength);
             player.start(0, player.startPoint);
             Tone.Transport.scheduleOnce(() => {
-                console.log("stopping" + player.name)
+                console.log("stopping" + player.name);
                 player.stop();
             }, `+${duration}`);
         }, `+${time}`);
     };
 
-
-    let mainLoop = () =>  {
-        console.log('Waiting for Tone....');
+    let mainLoop = () => {
         Tone.loaded().then(() => {
-            console.log('Tone is Loaded)');
+            console.log("Tone is Loaded)");
             Tone.Transport.bpm.value = 55;
+            delay2.set({
+                delayTime: "2m",
+            });
+            delay4.set({
+                delayTime: "4m",
+            });
 
-                Tone.start();
-                Tone.Transport.start();
-                // play the first player for between 100-120 seconds.
-                let firstDuration = getRandom(100, 120);
-                // The first player should start immediately
-                console.log('Playing first player for ' + firstDuration + ' seconds.');
-                playSchedule(players[selectPlayer(players)], 0, firstDuration);
-                // Select a player to start, then play for a random duration.
-                let loop = new Tone.Loop((time) => {
-                    let duration = getRandom(90, 120);
-                    playSchedule(players[selectPlayer(players)], getRandom(1, 30), duration);
-                }, "45").start("+45");
-        })
-    }; 
+            console.log("Starting Tone and transport");
+            Tone.Transport.start();
+            console.log("These are the players");
+            console.log(players);
+            // play the first player for between 100-120 seconds.
+            let firstDuration = getRandom(100, 120);
+            // The first player should start immediately
 
+            playSchedule(players[selectPlayer(players)], 0, firstDuration);
+            // Select a player to start, then play for a random duration.
+            let loop = new Tone.Loop((time) => {
+                let duration = getRandom(90, 120);
+                playSchedule(
+                    players[selectPlayer(players)],
+                    getRandom(1, 10),
+                    duration,
+                );
+            }, "45").start("+45");
+        });
+    };
+
+    window.toggleSound = () => {
+        if (!isPlaying) {
+            isPlaying = true;
+            console.log("Toggling Sound");
+            Tone.start();
+
+            console.log("Waiting for Tone....");
+
+            mainLoop();
+        } else {
+            Tone.Transport.stop();
+            isPlaying = false;
+        }
+    };
 </script>
