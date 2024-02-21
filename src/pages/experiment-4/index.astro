@@ -14,7 +14,13 @@ import Player from "../../components/Player.astro";
             way to do it, but I don't want to spend more time on it.
         </p>
 
-        <p></p>
+        <p>
+            After the Third experiments, I felt like I was starting to grasp a bit how to handle starting and stopping events on the timeline.  I decided to take a slightly different approach for this one, namely - instantiate 4 players with 4 random samples.  The pool of samples to select from is small (4 individual files), but this array of four samples could be any of them, including dupliaces.  Then, the loop would execute and schedule one of the non-playing players to start at a random time, and play for a random duration.  The duration is constrained to be between 90 and 120 seconds.  The first player is scheduled to start immediately and play for a random duration between 100 and 120 seconds.  The loop is scheduled to start at 45 seconds, and then every 45 seconds after that (The first player is set playing right out of the box).  The players are then stopped after their duration has elapsed, then put back into the non-playing state for selection.
+        </p>
+
+        <p>
+            I ran into issues with this one for reasons I couldn't quite fathom, but that I suspect were around passing the players as part of handing them into the loop. Once I simplified the code to be more linear, things started working more reliably, but I really would like more modular code that at least doesn't break my brain trying to follow the execution.
+        </p>
 
         <button class="btn btn-primary" onclick="toggleSound()">Audio On</button
         >
