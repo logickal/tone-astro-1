@@ -1,13 +1,17 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import Player from "../../components/Player.astro";
+import Player from "../../components/Player.svelte";
+import Experiment5 from './Experiment5.svelte';
 ---
 
-<Layout title="The Fifth Experiment">\
+<Layout title="The Fifth Experiment">
     <main class="prose mx-auto py-15">
-        <h1>Experiment 4</h1>
-        <Player />
+        <h1>Experiment 5</h1>
+        <Player client:load/>
+        <p>
+            This is the fifth experiment. It's a simple experiment to test the audio player component </p>
+
+        <Experiment5 client:load/>
     </main>
   </Layout> 
 
-  
