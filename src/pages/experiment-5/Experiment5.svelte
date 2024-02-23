@@ -1,10 +1,14 @@
 <script>
+    import { onMount } from 'svelte';
     import {isPlaying} from '../../store.js'
     import * as Tone from 'tone';
+    import { getRandom, setRandomParam } from '../../lib/utils.js';
 
     let messageText = 'Waiting for message text';
-    // Reactive statement that updates messageText based on the value of isPlaying
-    $: messageText = $isPlaying ? `Players configured: ${JSON.stringify(playerParams)}` : 'Waiting for message text';
+
+    let playerParams = [];
+
+
 
     // We will start with the same 4 samples.
     // We will then generate parameters for them:
@@ -32,10 +36,19 @@
     // - select the second sample from a player that is not yet triggered (playing state off) 
     // - play the second sample for a duration
 
+    onMount(async () => {
 
-    let getRandom = (min, max) => {
-        return Math.random() * (max - min) + min;
-    };
+    
+    // Reactive statement that updates messageText based on the value of isPlaying
+    console.log(isPlaying);
+
+        isPlaying.subscribe((value) => {
+            messageText = value ? `Players configured: ${JSON.stringify(playerParams)}` : 'Waiting for message text';
+            let playerState = messageText;
+        });
+
+        messageText = $isPlaying ? `Players configured: ${JSON.stringify(playerParams)}` : 'Waiting for message text';
+
 
     let audioFiles = [
         "audio/4pos.mp3",
@@ -53,16 +66,13 @@
 
     let channels = {};
 
-    // Create 6 channels.
-    for (let i = 1; i <= 6; i++) {
-        channels[`channel${i}`] = new Tone.Channel(-6, 0).toDestination();
-    }
-
+    let testPlayer = new Tone.Player(audioFiles[0]).toDestination();
 
 
     let initializeParams = (audioFiles) => {
         for (let i=0; i < (playerCount); i++) {
             let playerIndex = i;
+            let audioFile = audioFiles[i];
             let loopStart = getRandom(0, 10);
             let loopLength = getRandom(10, 20);
             let pitch = getRandom(0.5, 2);
@@ -86,6 +96,7 @@
 
             playerParams.push({
                 playerIndex: playerIndex,
+                audioFile: audioFile,
                 loopStart: loopStart,
                 loopLength: loopLength,
                 pitch: pitch,
@@ -113,6 +124,9 @@
     if (isPlaying) {
         initializeParams(audioFiles);
     }
+
+
+    });
 
 
 
