@@ -6,6 +6,10 @@
         return parseFloat(random.toFixed(decimalPlaces));
     };
 
+    export let getRandomBoolean = () => {
+        return Math.random() < 0.5;
+    }
+
     export let setRandomParam = (arr, probability = null) => {
         if (probability !== null) {
             let random = getRandom(0, 100);
