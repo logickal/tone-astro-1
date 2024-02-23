@@ -2,13 +2,24 @@
     import { onMount } from 'svelte';
     import {isPlaying} from '../../store.js'
     import * as Tone from 'tone';
-    import { getRandom, setRandomParam } from '../../lib/utils.js';
+    import { getRandom, getRandomBoolean, setRandomParam } from '../../lib/utils.js';
 
     let messageText = 'Waiting for message text';
 
     let playerParams = [];
 
+    // Parameters for the players.
 
+    let audioFiles = [
+        "audio/4pos.mp3",
+        "audio/bathing-hands.mp3",
+        "audio/carter.mp3",
+        "audio/cmin.mp3",
+    ];
+
+    let filterTypes = ['none', 'lowpass', 'highpass', 'bandpass', 'notch'];
+    let modSources = ['none', 'envelope1', 'envelope2','lfo1', 'lfo2', 'lfo3'];
+    let pitchValues = [0, +7, +12, -12, -5];
 
     // We will start with the same 4 samples.
     // We will then generate parameters for them:
@@ -50,19 +61,13 @@
         messageText = $isPlaying ? `Players configured: ${JSON.stringify(playerParams)}` : 'Waiting for message text';
 
 
-    let audioFiles = [
-        "audio/4pos.mp3",
-        "audio/bathing-hands.mp3",
-        "audio/carter.mp3",
-        "audio/cmin.mp3",
-    ];
+
 
     let player1, player2, player3, player4;
     let playerParams = [];
     let playerCount = 4;
 
-    let filterTypes = ['none', 'lowpass', 'highpass', 'bandpass', 'notch'];
-    let modSources = ['none', 'envelope1', 'envelope2','lfo1', 'lfo2', 'lfo3'];
+
 
     let channels = {};
 
@@ -72,9 +77,10 @@
     let initializeParams = (audioFiles) => {
         for (let i=0; i < (playerCount); i++) {
             let playerIndex = i;
-            let audioFile = audioFiles[i];
-            let loopStart = getRandom(0, 10);
-            let loopLength = getRandom(10, 20);
+            let audioFile = setRandomParam(audioFiles);
+            // loopStart and loopLength will need to be set based on the duration of the file.
+            //let loopStart = getRandom(0, 10);
+            //let loopLength = getRandom(10, 20);
             let pitch = getRandom(0.5, 2);
             let filter = getRandom(0, 3);
             let filterFreq = getRandom(100, 1000);
@@ -97,8 +103,8 @@
             playerParams.push({
                 playerIndex: playerIndex,
                 audioFile: audioFile,
-                loopStart: loopStart,
-                loopLength: loopLength,
+                //loopStart: loopStart,
+                //loopLength: loopLength,
                 pitch: pitch,
                 filter: filter,
                 filterFreq: filterFreq,
