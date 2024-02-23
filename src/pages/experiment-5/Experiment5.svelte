@@ -1,12 +1,26 @@
 <script>
-    import { onMount } from 'svelte';
-    import {isPlaying} from '../../store.js'
-    import * as Tone from 'tone';
-    import { getRandom, getRandomBoolean, setRandomParam } from '../../lib/utils.js';
+    import { onMount } from "svelte";
+    import { isPlaying } from "../../store.js";
+    import * as Tone from "tone";
+    import {
+        getRandom,
+        getRandomBoolean,
+        setRandomParam,
+    } from "../../lib/utils.js";
 
-    let messageText = 'Waiting for message text';
+    let messageText = "Waiting for message text";
 
     let playerParams = [];
+    let playerCount = 4;
+    let channels = {};
+
+    let player1, player2, player3, player4;
+    let ampEnv1, ampEnv2, ampEnv3, ampEnv4;
+    let reverb, ddl4, ddl2;
+    let filter1, filter2, filter3, filter4;
+    let chorus1, chorus2, chorus3, chorus4;
+    let lfo1, lfo2, lfo3, lfo4;
+    let modEnv1, modEnv2, modEnv3, modEnv4;
 
     // Parameters for the players.
 
@@ -17,8 +31,8 @@
         "audio/cmin.mp3",
     ];
 
-    let filterTypes = ['none', 'lowpass', 'highpass', 'bandpass', 'notch'];
-    let modSources = ['none', 'envelope1', 'envelope2','lfo1', 'lfo2', 'lfo3'];
+    let filterTypes = ["none", "lowpass", "highpass", "bandpass", "notch"];
+    let modSources = ["none", "envelope1", "envelope2", "lfo1", "lfo2", "lfo3"];
     let pitchValues = [0, +7, +12, -12, -5];
 
     // We will start with the same 4 samples.
@@ -40,42 +54,9 @@
     // Playing state (on or off)
 
     // We will set the parameters, then pass those parameters into the players we create.
-
-    // We need to answer the question of how we want to schedule the players to play.  Thinking through the loop:
-    // - Select the first sample and the duration
-    // - Play the first sample
-    // - select the second sample from a player that is not yet triggered (playing state off) 
-    // - play the second sample for a duration
-
-    onMount(async () => {
-
-    
-    // Reactive statement that updates messageText based on the value of isPlaying
-    console.log(isPlaying);
-
-        isPlaying.subscribe((value) => {
-            messageText = value ? `Players configured: ${JSON.stringify(playerParams)}` : 'Waiting for message text';
-            let playerState = messageText;
-        });
-
-        messageText = $isPlaying ? `Players configured: ${JSON.stringify(playerParams)}` : 'Waiting for message text';
-
-
-
-
-    let player1, player2, player3, player4;
-    let playerParams = [];
-    let playerCount = 4;
-
-
-
-    let channels = {};
-
-    let testPlayer = new Tone.Player(audioFiles[0]).toDestination();
-
-
     let initializeParams = (audioFiles) => {
-        for (let i=0; i < (playerCount); i++) {
+        console.log("Initializing parameters");
+        for (let i = 0; i < playerCount; i++) {
             let playerIndex = i;
             let audioFile = setRandomParam(audioFiles);
             // loopStart and loopLength will need to be set based on the duration of the file.
@@ -122,21 +103,73 @@
                 delayAmt: delayAmt,
                 pan: pan,
                 panMod: panMod,
-                playing: playing
+                playing: playing,
             });
         }
-    }
+        return playerParams;
 
-    if (isPlaying) {
-        initializeParams(audioFiles);
-    }
+    };
+    // We need to answer the question of how we want to schedule the players to play.  Thinking through the loop:
+    // - Select the first sample and the duration
+    // - Play the first sample
+    // - select the second sample from a player that is not yet triggered (playing state off)
+    // - play the second sample for a duration
+
+    onMount(async () => {
+        Tone.start();
+
+        // Reactive statement that updates messageText based on the value of isPlaying
+        isPlaying.subscribe((value) => {
+            playerParams = value ? initializeParams(audioFiles) : [];
+            messageText = value
+                ? `Players configured: ${JSON.stringify(playerParams)}`
+                : "Waiting for message text";
+            let playerState = messageText;
+            if (isPlaying) {
+                console.log('isPlaying is true');
+                playPiece(playerParams);
+            } else {
+                console.log('isPlaying is false');
+                Tone.Timeline.stop();
+                
+            }   
+        });
 
 
     });
 
+    let playPiece = (playerParams) => {
+                // Create a player and connect it to the destination
+                let testChannel = new Tone.Channel().toDestination();
+        console.log(audioFiles[2]);         
+        let testPlayer = new Tone.Player(audioFiles[2]);
+        console.log(testPlayer);
+        let testAmpEnv = new Tone.AmplitudeEnvelope({
+            attack: "8n",
+            decay: 0.3,
+            sustain: 1.0,
+            release: "4n",
+        }).toDestination('testChannel');
+        testPlayer.connect(testAmpEnv);
+        console.log('testPlayer loaded: ', testPlayer.loaded);
+        if (testPlayer.loaded) {
+            console.log('testPlayer loaded and isPlaying is true.  Starting testPlayer.')
+            testPlayer.start();
+            Tone.Timeline.start();
+            let loop = new Tone.Loop((time) => {
+                console.log('Loop started');
+                testPlayer.start();
+                Tone.Transport.schedule(time => {
+                    testAmpEnv.triggerAttackRelease("8n", time);
+                    console.log('testAmpEnv triggered');
+                }, "2n").start(0);
+            }, "1m").start(0);
+        }
+    };
 
-
-
+    let togglePlaying = () => {
+        isPlaying.update((value) => !value);
+    };
 </script>
 
 <div>

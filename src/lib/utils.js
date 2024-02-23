@@ -18,5 +18,5 @@
             }
         }
         let index = getRandom(0, arr.length, 0);
-        return arr[index];
+        return arr[index-1];
     };
