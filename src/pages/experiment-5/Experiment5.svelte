@@ -148,18 +148,18 @@
         console.log(audioFiles[2]);         
 
         let testAmpEnv = new Tone.AmplitudeEnvelope({
-            attack: 1.2,
+            attack: 10,
             decay: 0.3,
             sustain: 1.0,
-            release: 1.2,
+            release: 10,
         }).connect(testChannel);
 
         let testPlayer = new Tone.Player(audioFiles[2], () => {
-            testPlayer.autostart = true;
             console.log('2. testPlayer loaded');
             let loop = new Tone.Loop((time) => {
                 console.log('4. Loop started');
                 Tone.Transport.schedule((time) => {
+                    testPlayer.start(time, 5);
                     testAmpEnv.triggerAttackRelease("8n", time);
                     console.log('5. testAmpEnv triggered');
                 }, Tone.now());

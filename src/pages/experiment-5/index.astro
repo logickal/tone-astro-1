@@ -7,9 +7,21 @@ import Experiment5 from './Experiment5.svelte';
 <Layout title="The Fifth Experiment">
     <main class="prose mx-auto py-15">
         <h1>Experiment 5</h1>
-        <Player client:load/>
         <p>
-            This is the fifth experiment. It's a simple experiment to test the audio player component </p>
+            This is the fifth experiment. It's a simple experiment to test the audio player component 
+        </p>
+    
+        <p>
+            Ultimately, the idea here is twofold: establish the components to allow toggling playback client-side and validation of state, and then build to a more complex playback state with 4 players, effects, envelopes, and more.  In this first attempt I started outlining those grand plans in creating lots of configuration points that are built into an array that will ulitmately be passed to the player. You'll see this content get displayed via the svelte component in the page.
+        </p>
+        <p>
+            However, as I started building out a test player and setting a loop, I was once again bothered by the problem of loading the large audio files and the callbacks required. I don't want to get myself into callback hell with chained dependencies, so I'm leaving this one here and picking up in experiment 5a to attempt to solve the problem of loading the audio files and setting the loop outside of a single callback.
+        </p>
+        <p>
+            So, as it stands, this experiment is not very rewarding.  It loads a single player using the smallest audio file and executes as simple loop after the file is loaded.  It does pass to an Amplitude Envelope, so the player is playing the file and the audio is effectively gated by that envelope.  But, it's not very interesting.  I'm going to leave it here and move on to the next experiment.
+        </p>
+        
+        <Player client:load/>
 
         <Experiment5 client:load/>
     </main>
