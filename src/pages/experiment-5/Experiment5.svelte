@@ -120,17 +120,18 @@
 
         // Reactive statement that updates messageText based on the value of isPlaying
         isPlaying.subscribe((value) => {
+            console.log(value);
             playerParams = value ? initializeParams(audioFiles) : [];
             messageText = value
                 ? `Players configured: ${JSON.stringify(playerParams)}`
                 : "Waiting for message text";
             let playerState = messageText;
-            if (isPlaying) {
+            if (value === true) {
                 console.log('isPlaying is true');
                 playPiece(playerParams);
             } else {
                 console.log('isPlaying is false');
-                Tone.Timeline.stop();
+                Tone.Transport.stop();
                 
             }   
         });
@@ -139,37 +140,39 @@
     });
 
     let playPiece = (playerParams) => {
+        Tone.Transport.start();
+
+        console.log('1. playPiece called');
                 // Create a player and connect it to the destination
                 let testChannel = new Tone.Channel().toDestination();
         console.log(audioFiles[2]);         
-        let testPlayer = new Tone.Player(audioFiles[2]);
-        console.log(testPlayer);
+
         let testAmpEnv = new Tone.AmplitudeEnvelope({
-            attack: "8n",
+            attack: 1.2,
             decay: 0.3,
             sustain: 1.0,
-            release: "4n",
-        }).toDestination('testChannel');
-        testPlayer.connect(testAmpEnv);
-        console.log('testPlayer loaded: ', testPlayer.loaded);
-        if (testPlayer.loaded) {
-            console.log('testPlayer loaded and isPlaying is true.  Starting testPlayer.')
-            testPlayer.start();
-            Tone.Timeline.start();
+            release: 1.2,
+        }).connect(testChannel);
+
+        let testPlayer = new Tone.Player(audioFiles[2], () => {
+            testPlayer.autostart = true;
+            console.log('2. testPlayer loaded');
             let loop = new Tone.Loop((time) => {
-                console.log('Loop started');
-                testPlayer.start();
-                Tone.Transport.schedule(time => {
+                console.log('4. Loop started');
+                Tone.Transport.schedule((time) => {
                     testAmpEnv.triggerAttackRelease("8n", time);
-                    console.log('testAmpEnv triggered');
-                }, "2n").start(0);
+                    console.log('5. testAmpEnv triggered');
+                }, Tone.now());
             }, "1m").start(0);
-        }
+
+        }).connect(testAmpEnv);    
     };
 
     let togglePlaying = () => {
         isPlaying.update((value) => !value);
     };
+
+
 </script>
 
 <div>
