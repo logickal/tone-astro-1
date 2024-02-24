@@ -1,0 +1,19 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Player from "../../components/Player.svelte";
+import Experiment5 from './Experiment5a.svelte';
+---
+
+<Layout title="Experiment 5a">
+    <main class="prose mx-auto py-15">
+        <h1>Experiment 5a</h1>
+        <p>
+            This is the continuation of the fifth experiment.  We are going to build on our previous work to continue to attempt to make the player more modular and continue working towards our goal of a more complex randomized piece.
+        </p>
+        
+        <Player client:load/>
+
+        <Experiment5 client:load/>
+    </main>
+  </Layout> 
+
