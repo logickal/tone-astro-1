@@ -16,7 +16,7 @@
     "astro": "^4.3.7",
     "daisyui": "^4.7.2",
     "nanostores": "^0.9.5",
-    "svelte": "^4.2.11",
+    "svelte": "^4.2.12",
     "tailwindcss": "^3.4.1",
     "tone": "^14.7.77"
   }
