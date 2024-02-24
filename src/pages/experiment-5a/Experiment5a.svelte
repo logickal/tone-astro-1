@@ -7,12 +7,10 @@
         getRandomBoolean,
         setRandomParam,
     } from "../../lib/utils.js";
-    import Player from "../../components/Player.svelte";
 
     let messageText = "Waiting for message text";
 
     let playerParams = [];
-    let playerCount = 4;
     let channels = {};
 
     let player1, player2, player3, player4;
@@ -22,6 +20,8 @@
     let chorus1, chorus2, chorus3, chorus4;
     let lfo1, lfo2, lfo3, lfo4;
     let modEnv1, modEnv2, modEnv3, modEnv4;
+    let playerCount;
+
 
     // Parameters for the players.
 
@@ -30,11 +30,13 @@
         "audio/bathing-hands.mp3",
         "audio/carter.mp3",
         "audio/cmin.mp3",
+        "audio/migration-2.mp3"
     ];
 
     let filterTypes = ["none", "lowpass", "highpass", "bandpass", "notch"];
     let modSources = ["none", "envelope1", "envelope2", "lfo1", "lfo2", "lfo3"];
     let pitchValues = [1, 1.25, 2, .5, .75, .25];
+    let panValues = [0, -1, 1, .5];
 
     // We will start with the same 4 samples.
     // We will then generate parameters for them:
@@ -57,7 +59,7 @@
     // We will set the parameters, then pass those parameters into the players we create.
     let initializeParams = (audioFiles) => {
         console.log("Initializing parameters");
-        for (let i = 0; i < playerCount; i++) {
+        for (let i = 0; i < 4; i++) {
             let playerIndex = i;
             let audioFile = setRandomParam(audioFiles);
             // loopStart and loopLength will need to be set based on the duration of the file.
@@ -116,7 +118,7 @@
         return playerParams;
     };
 
-    // We need to answer the question of how we want to schedule the players to play.  Thinking through the loop:
+    // We need to answer the question of how we want to schedule the players to play.  Thinking through the loop:sorry, 
     // - Select the first sample and the duration
     // - Play the first sample
     // - select the second sample from a player that is not yet triggered (playing state off)
@@ -216,7 +218,7 @@
     // Function to trigger the envelope
     function triggerEnvelope(envelope, duration) {
         console.log("8. triggerEnvelope");
-        envelope.triggerAttackRelease(envelope.attack + "8n", duration);
+        envelope.triggerAttackRelease(envelope.attack, duration);
     }
 
     function setLoopPoints(player) {
@@ -240,6 +242,11 @@
 
         playerParams.forEach((params, index) => {
             let channel = channels[`channel${index + 1}`];
+            console.log('Channel: ' + `channel${index + 1}`);
+
+            channels[`channel${index + 1}`].set({
+                pan: panValues[index],
+            });
 
             ampEnvs[index] = new Tone.AmplitudeEnvelope({
                 attack: params.attack,
@@ -249,10 +256,11 @@
             }).connect(channel);
 
             channel.send("channelReverb", 5);
-            let effectChannel = channels[params.effect];
+            let effectChannel = params.effect;
+            console.log('Effect Channel: ' + effectChannel);
             if (effectChannel) {
                 channel.send(effectChannel, 0.5);
-                effectChannel.receive(`channel${index + 1}`, 0.5);
+                channels[effectChannel].receive(`channel${index + 1}`, 0.5);
             }
 
             players[index] = new Tone.Player(params.audioFile, () => {

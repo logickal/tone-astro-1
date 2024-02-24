@@ -10,6 +10,18 @@ import Experiment5 from './Experiment5a.svelte';
         <p>
             This is the continuation of the fifth experiment.  We are going to build on our previous work to continue to attempt to make the player more modular and continue working towards our goal of a more complex randomized piece.
         </p>
+
+        <p>I still think the complexity is getting overwhelming trying to diagnose too many things at once. I create the four players along with some associated effects, but the output is not predictable and has issues I can't seem to properly troubleshoot:
+            <ul>
+                <li>Initial playback of the Tone.loop takes a very long time to start, even though the players should be loaded</li>
+                <li>I can't get the sends and receives to properly work - there doesn't seem to be consistent reverb and zero delay so far</li>
+                <li>The loops themselves don't seem to be working as compellingly as the prior experiments, so I need to look at that as well.</li>
+            </ul>
+        </p>
+
+        <p>
+            I'm going to tear it all back down and start again, perhaps with a more simple approach.
+        </p>
         
         <Player client:load/>
 
