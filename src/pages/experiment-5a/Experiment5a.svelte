@@ -81,7 +81,7 @@
             let pan = getRandom(-1, 1);
             let panMod = getRandom(0, 1);
             let attack = getRandom(15, 30);
-            let release = attack + getRandom(15, 30);
+            let release = (attack + getRandom(15, 30));
             let effect = setRandomParam(["delay4", "delay2"]);
             let playing = false;
 
@@ -142,10 +142,20 @@
         // Delay4
         // Delay2
         const reverb = new Tone.Reverb({
-            decay: 15,
+            decay: 35,
             preDelay: 0.2,
             wet: 1,
         }).connect(channels.channelReverb);
+
+        channels.channelReverb.receive("channels.channel1");
+        channels.channelReverb.receive("channels.channel2");
+        channels.channelReverb.receive("channels.channel3");
+        channels.channelReverb.receive("channels.channel4");
+
+
+        channels.channelReverb.set({
+            volume: -5,
+        });
         const delay4 = new Tone.FeedbackDelay(1600, 0.65).set({ wet: 0.5 });
         const delay2 = new Tone.FeedbackDelay(5000, 0.65).set({ wet: 0.5 });
 
@@ -154,8 +164,9 @@
 
         delay4.chain(filter4, channels.delay4);
         delay2.chain(filter2, channels.delay2);
-        channels.delay2.send("channelReverb", 0.5);
-        channels.delay4.send("channelReverb", 0.5);
+        let delay2Send = channels.delay2.send("channelReverb", 0.5);
+        let delay4send = channels.delay4.send("channelReverb", 0.5);
+
 
         // Reactive statement that updates messageText based on the value of isPlaying
         isPlaying.subscribe((value) => {
@@ -237,8 +248,12 @@
                 release: params.release,
             }).connect(channel);
 
-            channel.send("channelReverb", 0.8);
-            channel.send(`channels.${params.effect}`, 0.5);
+            channel.send("channelReverb", 5);
+            let effectChannel = channels[params.effect];
+            if (effectChannel) {
+                channel.send(effectChannel, 0.5);
+                effectChannel.receive(`channel${index + 1}`, 0.5);
+            }
 
             players[index] = new Tone.Player(params.audioFile, () => {
                 console.log("3. testPlayer callback");
