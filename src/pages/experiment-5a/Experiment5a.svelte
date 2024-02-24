@@ -7,6 +7,7 @@
         getRandomBoolean,
         setRandomParam,
     } from "../../lib/utils.js";
+    import Player from "../../components/Player.svelte";
 
     let messageText = "Waiting for message text";
 
@@ -79,6 +80,8 @@
             let delayAmt = getRandom(0, 1);
             let pan = getRandom(-1, 1);
             let panMod = getRandom(0, 1);
+            let attack = getRandom(15, 30);
+            let release = (attack + getRandom(15, 30));
             let playing = false;
 
             playerParams.push({
@@ -103,12 +106,14 @@
                 delayAmt: delayAmt,
                 pan: pan,
                 panMod: panMod,
+                attack: attack,
+                release: release,
                 playing: playing,
             });
         }
         return playerParams;
-
     };
+
     // We need to answer the question of how we want to schedule the players to play.  Thinking through the loop:
     // - Select the first sample and the duration
     // - Play the first sample
@@ -117,21 +122,35 @@
 
     onMount(async () => {
         Tone.start();
+        Tone.Transport.bpm.value = 55;
+
+        channels = {
+            channel1: new Tone.Channel().toDestination(),
+            channel2: new Tone.Channel().toDestination(),
+            channel3: new Tone.Channel().toDestination(),
+            channel4: new Tone.Channel().toDestination(),
+        };
 
         // Reactive statement that updates messageText based on the value of isPlaying
         isPlaying.subscribe((value) => {
             console.log(value);
+            // Initialize the player params when toggling isPlaying
             playerParams = value ? initializeParams(audioFiles) : [];
+            // Set the player message text - currently just a stringified version of the playerParams.
             messageText = value
                 ? `Players configured: ${JSON.stringify(playerParams)}`
                 : "Waiting for message text";
+            // Set the player state - not sure if we need this.
             let playerState = messageText;
+            // Play the piece if isPlaying is true
             if (value === true) {
-                console.log('isPlaying is true');
-                playPiece(playerParams);
+                console.log('1. isPlaying is true');
+                // Play one voice
+                playPiece(playerParams, 1);
             } else {
+                // Stop the piece.
                 console.log('isPlaying is false');
-                Tone.Transport.stop();
+                stopPiece();
                 
             }   
         });
@@ -139,37 +158,67 @@
 
     });
 
-    let playPiece = (playerParams) => {
+    // The loop execution for each voice
+    function voicePlayback(playerParams, player, envelope) {
+        console.log('5. voicePlayback');
+        // Start the player - schedule NOW and offset 5 seconds into the sample
+        // TODO: configure the duration and work out how to get the start time working properly.
+        player.start(Tone.now(), 5);
+        // Transport should already be started, so start the loop.
+        console.log('6. Loop starting.');
+        // Set the loop interval to the sum of the attack and release plus 1 measure at the current tempo.
+        let interval = envelope.attack + envelope.release + Tone.Transport.toSeconds("1m");
+        console.log('Interval: ' + interval);
+        let loop = new Tone.Loop((time) => {
+            // Trigger the envelope
+            Tone.Transport.schedule((time) => {
+                console.log('7. triggerEnvelope');
+                triggerEnvelope(envelope, Tone.now());
+             }, Tone.now());
+         }, interval).start(0);
+    }
+
+    // Function to trigger the envelope
+    function triggerEnvelope(envelope, duration) {
+        console.log('8. triggerEnvelope');
+        envelope.triggerAttackRelease((envelope.attack + "8n"), duration);
+    }
+
+    function setLoopPoints(player) {
+        console.log('3. setLoopPoints');
+            // Set the loop start and end
+            const duration = player.buffer.duration;
+            const loopLength = Math.min(getRandom(1, 5), duration);
+            const start = Math.random() * (duration - loopLength);
+            player.startPoint = start;
+            player.setLoopPoints(start, start + loopLength);
+            player.start(0, player.startPoint);
+            player.loop = true;
+    }
+
+    // Play the piece - main player creation and kick off playing
+    let playPiece = (playerParams, voices) => {
+        console.log('2. playPiece called');
+        let testAmpEnv = new Tone.AmplitudeEnvelope({
+            attack: playerParams[0].attack,
+            decay: 0.4,
+            sustain: 1,
+            release: playerParams[0].release,
+        }).connect(channels.channel1);
+        let testPlayer = new Tone.Player(playerParams[0].audioFile, () => {
+            console.log('3. testPlayer callback');
+            setLoopPoints(testPlayer);
+            console.log('4. setLoopPoints: ' +  testPlayer.loopStart);
+            console.log('Voice playback staring');
+            voicePlayback(playerParams, testPlayer, testAmpEnv);
+        }).connect(testAmpEnv);
+        // Start the transport.
         Tone.Transport.start();
 
-        console.log('1. playPiece called');
-                // Create a player and connect it to the destination
-                let testChannel = new Tone.Channel().toDestination();
-        console.log(audioFiles[2]);         
-
-        let testAmpEnv = new Tone.AmplitudeEnvelope({
-            attack: 10,
-            decay: 0.3,
-            sustain: 1.0,
-            release: 10,
-        }).connect(testChannel);
-
-        let testPlayer = new Tone.Player(audioFiles[2], () => {
-            console.log('2. testPlayer loaded');
-            let loop = new Tone.Loop((time) => {
-                console.log('4. Loop started');
-                Tone.Transport.schedule((time) => {
-                    testPlayer.start(time, 5);
-                    testAmpEnv.triggerAttackRelease("8n", time);
-                    console.log('5. testAmpEnv triggered');
-                }, Tone.now());
-            }, "1m").start(0);
-
-        }).connect(testAmpEnv);    
     };
 
-    let togglePlaying = () => {
-        isPlaying.update((value) => !value);
+    let stopPiece = () => {
+        Tone.Transport.stop();
     };
 
 
