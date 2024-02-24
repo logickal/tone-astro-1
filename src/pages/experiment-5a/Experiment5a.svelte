@@ -82,6 +82,7 @@
             let panMod = getRandom(0, 1);
             let attack = getRandom(15, 30);
             let release = (attack + getRandom(15, 30));
+            let effect = setRandomParam(["delay4", "delay2"]);
             let playing = false;
 
             playerParams.push({
@@ -108,6 +109,7 @@
                 panMod: panMod,
                 attack: attack,
                 release: release,
+                effect: effect,
                 playing: playing,
             });
         }
@@ -129,7 +131,34 @@
             channel2: new Tone.Channel().toDestination(),
             channel3: new Tone.Channel().toDestination(),
             channel4: new Tone.Channel().toDestination(),
+            channel5: new Tone.Channel().toDestination(),
+            delay2: new Tone.Channel().toDestination(),
+            delay4: new Tone.Channel().toDestination(),
+            channelReverb: new Tone.Channel().toDestination(),
         };
+
+            // Reverb
+    // Delay4
+    // Delay2
+    const reverb = new Tone.Reverb({
+        decay: 15,
+        preDelay: 0.2,
+        wet: 1,
+    }).connect(channels.channelReverb);
+    const delay4 = new Tone.FeedbackDelay(800, 0.65).set({ wet: 0.5 });
+    const delay2 = new Tone.FeedbackDelay(1600, 0.65).set({ wet: 0.5 });
+
+    const filter4 = new Tone.Filter(1000, "lowpass");
+    const filter2 = new Tone.Filter(900, "lowpass");
+
+    delay4.connect(filter4);
+    delay2.connect(filter2);
+    filter2.connect(channels.delay2);
+    filter4.connect(channels.delay4);
+    channels.delay2.send('channelReverb', 0.5);
+    channels.delay4.send('channelReverb', 0.5);
+
+
 
         // Reactive statement that updates messageText based on the value of isPlaying
         isPlaying.subscribe((value) => {
@@ -205,6 +234,9 @@
             sustain: 1,
             release: playerParams[0].release,
         }).connect(channels.channel1);
+        channels.channel1.send("channelReverb", .5);
+        channels.channel1.send(`channels.${playerParams[0].effect}`, .5);
+
         let testPlayer = new Tone.Player(playerParams[0].audioFile, () => {
             console.log('3. testPlayer callback');
             setLoopPoints(testPlayer);
