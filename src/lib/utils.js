@@ -17,6 +17,7 @@
                 return arr[0];
             }
         }
-        let index = getRandom(0, arr.length, 0);
-        return arr[index-1];
+        let index = getRandom(0, (arr.length - 1), 0);
+        console.log('index: ' + index);
+        return arr[index];
     };

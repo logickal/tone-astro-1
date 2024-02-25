@@ -1,0 +1,20 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Player from "../../components/Player.svelte";
+import Experiment6 from './Experiment6.svelte';
+---
+
+<Layout title="Experiment 6">
+    <main class="prose mx-auto py-15">
+        <h1>Experiment 6</h1>
+
+        <p>We are going to keep this more simple, but play with the granular synth in this experiment.  </p>
+
+        <p>This experiment loads a single Grain player and in its execution loop sets a random playback speed and detuning based on pre-set arrays that are then selected randomly at scheduling.  This is then run through a delay and a reverb.</p>
+      
+        <Player client:load/>
+
+        <Experiment6 client:load/>
+    </main>
+  </Layout> 
+
