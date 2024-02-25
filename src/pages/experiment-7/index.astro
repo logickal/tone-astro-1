@@ -1,0 +1,18 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Player from "../../components/Player.svelte";
+import Experiment7 from './Experiment7.svelte';
+---
+
+<Layout title="Experiment 7">
+    <main class="prose mx-auto py-15">
+        <h1>Experiment 7</h1>
+
+
+      
+        <Player client:load/>
+
+        <Experiment7 client:load/>
+    </main>
+  </Layout> 
+
