@@ -18,6 +18,5 @@
             }
         }
         let index = getRandom(0, (arr.length - 1), 0);
-        console.log('index: ' + index);
         return arr[index];
     };
