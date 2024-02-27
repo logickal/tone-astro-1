@@ -1,0 +1,21 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Player from "../../components/Player.svelte";
+import Experiment8 from './Experiment8.svelte';
+---
+
+<Layout title="Experiment 8">
+    <main class="prose mx-auto py-15">
+        <h1>Experiment 7</h1>
+
+        <p>
+            Building on Experiment 7, we are going to see how slow we can set playback of some of these Grain Players and add a third one.
+        </p>
+
+      
+        <Player client:load/>
+
+        <Experiment8 client:load/>
+    </main>
+  </Layout> 
+
