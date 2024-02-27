@@ -10,6 +10,7 @@
     import { get } from "svelte/store";
 
     // Variable declarations
+    let isFirstLoad = true;
     let messageText = "Waiting for message text";
     let player1, player2, ampEnv1, ampEnv2, lfo1, lfo2, modEnv, chorus, delay4, reverb;
     let channel1, channel2, reverbChannel, delayChannel;
@@ -64,10 +65,15 @@
                 console.log("1. Playing");
                 playPiece();
             } else {
+                if (isFirstLoad) {
+                    isFirstLoad = false;
+                } else {
                 console.log("2. Stopped");
                 Tone.Transport.stop();
                 player1.stop();
                 player2.stop();
+
+                }
             }
         });
 
