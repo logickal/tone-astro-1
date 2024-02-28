@@ -12,8 +12,8 @@
     // Variable declarations
     let isFirstLoad = true;
     let messageText = "Waiting for message text";
-    let player1, player2, ampEnv1, ampEnv2, lfo1, lfo2, modEnv, chorus, delay4, reverb;
-    let channel1, channel2, reverbChannel, delayChannel;
+    let player1, player2, player3, ampEnv1, ampEnv2, ampEnv3, lfo1, lfo2, modEnv, chorus, delay4, delay2, reverb;
+    let channel1, channel2, channel3, reverbChannel, delayChannel;
 
     let audioFiles = [
         "audio/4pos.mp3",
@@ -22,19 +22,8 @@
         "audio/migration-2.mp3",
     ];
 
-    let getLoopPoints = (duration) => {
-        console.log("getLoopPoints called");
-        let loopPoints = {};
-        console.log(duration);
-        loopPoints.loopLength = Math.min(getRandom(1, 5), duration);
-        loopPoints.loopStart = Math.random() * (duration - loopLength);
-        loopPoints.loopEnd = loopStart + loopLength;
-        console.log(loopPoints);
-        if (loopEnd > duration) {
-            loopEnd = duration;
-        }
-        return loopPoints;
-    };
+    let pitches = [0, -1200, -2400];
+    let playbackRates = [.5, .1, .01, .001, .25, .025];
 
     // Execute when mounted
     onMount(async () => {
@@ -42,11 +31,15 @@
         let tempo = getRandom(40, 60, 1);
         Tone.Transport.bpm.value = tempo;
 
+        //the audio channels
         channel1 = new Tone.Channel(0);
         channel2 = new Tone.Channel(0);
+        channel3 = new Tone.Channel(0);
 
-        let compressor1 = new Tone.Compressor(-50, 3);
-        let compressor2 = new Tone.Compressor(-50, 3);
+        // the compressors
+        let compressor1 = new Tone.Compressor(-50, 3).connect(channel1);
+        let compressor2 = new Tone.Compressor(-50, 3).connect(channel2);
+        let compressor3 = new Tone.Compressor(-50, 3).connect(channel3);
 
         // Effect init
         reverb = new Tone.Reverb({
@@ -54,8 +47,12 @@
             wet: .7,
         }).toDestination();
 
+        delay4 = new Tone.FeedbackDelay("4m", 0.85).connect(reverb);
+        delay2 = new Tone.FeedbackDelay("2d", 0.85).connect(reverb);    
+
         let lfo1 = new Tone.LFO(0.1, 0, .5).sync().start(0);
         let lfo2 = new Tone.LFO(0.08, .2, .5).sync().start(0);
+        let lfo4 = new Tone.LFO("2m", -.5, .5).sync().start(0);
 
         // Subscribe to button and activate player
 
@@ -72,14 +69,15 @@
                 Tone.Transport.stop();
                 player1.stop();
                 player2.stop();
-
+                player3.stop();
                 }
             }
         });
 
-        let voicePlayback = (player, ampEnv, rate) => {
+        let voicePlayback = (player, ampEnv, channel, rate) => {
             console.log("5. voicePlayback called");
             Tone.Transport.start();
+            let delays = [delay2, delay4];
 
             let loop = new Tone.Loop((time) => {
                 console.log("6. Loop started");
@@ -87,17 +85,20 @@
                 Tone.Transport.schedule((time) => {
                     player.loop = true;
                     player.start(time, startpoint);
-                    console.log('playbackRate: ' + player1.playbackRate);
+                    console.log('playbackRate: ' + player.playbackRate);
                     player.grainSize = getRandom(0.1, 0.5);
-                    let playbackRate = setRandomParam([1, .25, .5]);
-                    console.log('playbackRate: ' + playbackRate);
+                    let playbackRate = setRandomParam(playbackRates);
+                    console.log('playbackRate set at: ' + playbackRate);
                     player.playbackRate = playbackRate;
                     let originalDetune = player.detune;
-                    //let detune = setRandomParam([0, -1200, -2400]);
-//                    console.log('detune: ' + detune);
-                    //player.detune = detune;
+                    let detune = setRandomParam(pitches);
+                    console.log('detune: ' + detune);
+                    player.detune = detune;
+                    let selectedDelay = setRandomParam(delays);
+                    channel.connect(selectedDelay);
+                    console.log('Delay time: ' + selectedDelay.delayTime.value);
                     ampEnv.triggerAttackRelease("4n", Tone.now());
-                    console.log("7. envelope triggered " + ampEnv.name);
+                    console.log("7. envelope triggered " + player.name);
                 }, Tone.now());
             }, rate).start(0);
         };
@@ -107,17 +108,14 @@
             console.log("3. playPiece called");
             let audioFile1 = setRandomParam(audioFiles);
             let audioFile2 = setRandomParam(audioFiles);
-            let pitch1 = setRandomParam([0, -1200, -2400]);
-            let pitch2 = setRandomParam([0, -1200, -2400]);
-            delay4 = new Tone.FeedbackDelay("2d", 0.85);
+            let audioFile3 = setRandomParam(audioFiles);
+            let pitch1 = setRandomParam(pitches);
+            let pitch2 = setRandomParam(pitches);
+            let pitch3 = setRandomParam(pitches);
+
             player1 = new Tone.GrainPlayer(audioFile1, () => {
-                console.log("4. player loaded");
-//                let loopPoints = getLoopPoints(player1.buffer.duration);
-//                console.log(loopPoints);
-//                player1.loopStart = loopPoints.loopStart;
-//                player1.loopEnd = loopPoints.loopEnd;
-//                player1.loop = true;
-                player1.name = audioFile1;
+                console.log("4. player1 loaded");
+                player1.name = "player1-" + audioFile1;
                 player1.detune = pitch1;
                 ampEnv1 = new Tone.AmplitudeEnvelope({
                     attack: 5,
@@ -126,16 +124,14 @@
                     release: 10.2,
                     name:"ampEnv1",
                 });
-                player1.chain(ampEnv1, compressor1, channel1, delay4, reverb);
-                voicePlayback(player1, ampEnv1, "2m");
+                player1.chain(ampEnv1, compressor1);
+                voicePlayback(player1, ampEnv1, channel1, "2m");
             });
 
             player2 = new Tone.GrainPlayer(audioFile2, () => {
-                console.log("4. player loaded");
-                player2.name = audioFile2;
-                let lfo3 = new Tone.LFO((pitch2 - 200), (pitch2 + 200), .25).sync().start(0);
+                console.log("4. player2 loaded");
+                player2.name = "player2-" + audioFile2;
                 player2.detune = pitch2;
-                
                 ampEnv2 = new Tone.AmplitudeEnvelope({
                     attack: setRandomParam(["1m", 10, "4n"]),
                     decay: 0.2,
@@ -143,11 +139,27 @@
                     release: setRandomParam(["1m", 10, "4n"]),
                     name: "ampEnv2",
                 });
-                player2.chain(ampEnv2, compressor2, channel2, delay4, reverb);
-                lfo2 = new Tone.LFO(0.08, -.5, .5).sync().start(0);
+                player2.chain(ampEnv2, compressor2);
+
                 lfo2.connect(channel2.pan);
-                lfo3.connect(player2.detune);
-                voicePlayback(player2, ampEnv2, 15);
+                console.log("setarting voicePlayback for player2");
+                voicePlayback(player2, ampEnv2, channel2, 15);
+        });
+
+        player3 = new Tone.GrainPlayer(audioFile3, () => {
+                console.log("4. player3 loaded");
+                player3.name = "player3-" + audioFile3;
+                player2.detune = pitch3;
+                ampEnv3 = new Tone.AmplitudeEnvelope({
+                    attack: setRandomParam(["2m", 20, "1m"]),
+                    decay: 0.2,
+                    sustain: 1.0,
+                    release: setRandomParam(["2m", 25, "1m"]),
+                    name: "ampEnv3",
+                });
+                player3.chain(ampEnv3, compressor3);
+                lfo4.connect(channel3.pan);
+                voicePlayback(player3, ampEnv3, channel3, setRandomParam(["4m", "8m", "16m"]));
         });
     }
 });
