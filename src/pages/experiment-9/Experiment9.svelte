@@ -28,7 +28,6 @@
 
     // Execute when mounted
     onMount(async () => {
-        Tone.start();
         let tempo = getRandom(40, 60, 1);
         Tone.Transport.bpm.value = tempo;
 
@@ -66,6 +65,7 @@
         isPlaying.subscribe((value) => {
             messageText = value ? "Playing" : "Stopped";
             if (value === true) {
+                Tone.start();
                 console.log("1. Playing");
                 playPiece();
             } else {
