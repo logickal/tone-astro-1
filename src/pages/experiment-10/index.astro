@@ -1,0 +1,23 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import Player from "../../components/Player.svelte";
+import Experiment10 from './Experiment10.svelte';
+---
+
+<Layout title="Experiment 10">
+    <main class="prose mx-auto py-15">
+        <h1>Experiment 10: Slow Modulations
+        </h1>
+
+        <p>
+            This experiment brings us back to one Grainplayer, but in this case, we are modulating the granular parameters (and trying to modulate the delay time, but that doesn't seem to actually work in my implementation) with a simple lorenz equation modulator.  Turn the reverb up.
+            
+        </p>
+
+      
+        <Player client:load/>
+
+        <Experiment10 client:load/>
+    </main>
+  </Layout> 
+
